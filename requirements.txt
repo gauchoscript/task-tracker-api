@@ -1,0 +1,13 @@
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+sqlalchemy>=2.0.0
+asyncpg>=0.27.0
+alembic>=1.10.0
+pydantic-settings>=2.0.0
+redis>=4.5.0
+celery>=5.2.0
+python-multipart
+email-validator
+requests
+httpx
+psycopg2-binary  # For some synchronous operations if needed, or celery backend
