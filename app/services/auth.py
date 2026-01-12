@@ -4,11 +4,11 @@ import hashlib
 import base64
 from botocore.exceptions import ClientError
 from app.core.config import settings
-from app.schemas.auth import SignInRequest, TokenResponse
+from app.schemas.auth import AuthRequest, TokenResponse
 
 class AuthService:
     @staticmethod
-    async def signin(signin_data: SignInRequest) -> TokenResponse:
+    async def signin(signin_data: AuthRequest) -> TokenResponse:
         """
         Sign-in using Amazon Cognito.
         """
@@ -51,6 +51,38 @@ class AuthService:
             ]:
                 return None
             raise e
+
+    @staticmethod
+    async def signup(signup_data: AuthRequest) -> bool:
+        """
+        Sign-up a new user using Amazon Cognito.
+        """
+        client = boto3.client("cognito-idp", region_name=settings.COGNITO_REGION)
+        
+        try:
+            secret_hash = AuthService._calculate_secret_hash(
+                signup_data.email, 
+                settings.COGNITO_APP_CLIENT_ID, 
+                settings.COGNITO_CLIENT_SECRET
+            )
+            
+            client.sign_up(
+                ClientId=settings.COGNITO_APP_CLIENT_ID,
+                Username=signup_data.email,
+                Password=signup_data.password,
+                SecretHash=secret_hash,
+                UserAttributes=[
+                    {
+                        "Name": "email",
+                        "Value": signup_data.email
+                    },
+                ],
+            )
+            return True
+            
+        except ClientError as e:
+            print(e)
+            return False
     @staticmethod
     def _calculate_secret_hash(username: str, client_id: str, client_secret: str) -> str:
         """
