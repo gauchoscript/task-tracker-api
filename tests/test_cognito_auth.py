@@ -17,7 +17,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
 from app.services.auth import AuthService
-from app.schemas.auth import SignInRequest
+from app.schemas.auth import AuthRequest
 
 def test_calculate_secret_hash():
     """Test the SECRET_HASH calculation logic specifically."""
@@ -39,7 +39,7 @@ def test_calculate_secret_hash():
 
 @pytest.mark.asyncio
 async def test_signin_success():
-    signin_data = SignInRequest(email="test@example.com", password="password123")
+    signin_data = AuthRequest(email="test@example.com", password="password123")
     
     with patch("boto3.client") as mock_boto:
         mock_client = MagicMock()
@@ -57,11 +57,10 @@ async def test_signin_success():
         assert result.access_token == "fake_access_token"
         assert result.token_type == "Bearer"
         
-        # Verify SECRET_HASH was passed
         mock_client.initiate_auth.assert_called_once()
-        call_args = mock_client.initiate_auth.call_args[1]
-        assert "SECRET_HASH" in call_args["AuthParameters"]
-        assert len(call_args["AuthParameters"]["SECRET_HASH"]) > 0
+        auth_params = mock_client.initiate_auth.call_args[1]["AuthParameters"]
+        assert "SECRET_HASH" in auth_params
+        assert len(auth_params["SECRET_HASH"]) > 0
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("error_code, error_message", [
@@ -71,7 +70,7 @@ async def test_signin_success():
     ("PasswordResetRequiredException", "Password reset required."),
 ])
 async def test_signin_failure(error_code, error_message):
-    signin_data = SignInRequest(email="test@example.com", password="password123")
+    signin_data = AuthRequest(email="test@example.com", password="password123")
     
     with patch("boto3.client") as mock_boto:
         mock_client = MagicMock()
@@ -84,3 +83,37 @@ async def test_signin_failure(error_code, error_message):
         result = await AuthService.signin(signin_data)
         
         assert result is None
+
+@pytest.mark.asyncio
+async def test_signup_success():
+    signup_data = AuthRequest(email="newuser@example.com", password="password123")
+    
+    with patch("boto3.client") as mock_boto:
+        mock_client = MagicMock()
+        mock_boto.return_value = mock_client
+        mock_client.sign_up.return_value = {}
+        
+        result = await AuthService.signup(signup_data)
+        
+        assert result is True
+        
+        mock_client.sign_up.assert_called_once()
+        call_args = mock_client.sign_up.call_args[1]
+        assert "SecretHash" in call_args
+        assert len(call_args["SecretHash"]) > 0
+
+@pytest.mark.asyncio
+async def test_signup_failure():
+    signup_data = AuthRequest(email="newuser@example.com", password="password123")
+    
+    with patch("boto3.client") as mock_boto:
+        mock_client = MagicMock()
+        mock_boto.return_value = mock_client
+        mock_client.sign_up.side_effect = ClientError(
+            {"Error": {"Code": "UsernameExistsException", "Message": "User already exists"}},
+            "SignUp"
+        )
+        
+        result = await AuthService.signup(signup_data)
+        
+        assert result is False
