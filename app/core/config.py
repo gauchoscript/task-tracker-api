@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -10,18 +11,21 @@ class Settings(BaseSettings):
     POSTGRES_SERVER: str
     POSTGRES_PORT: str
     
-    SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-
     REDIS_HOST: str
     REDIS_PORT: int
 
+    COGNITO_USER_POOL_ID: str
+    COGNITO_APP_CLIENT_ID: str
+    COGNITO_CLIENT_SECRET: str
+    COGNITO_REGION: str
+
     DATABASE_URL: Optional[str] = None
 
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+    model_config = ConfigDict(
+        case_sensitive=True,
+        env_file=".env",
+        extra="ignore"
+    )
 
     def get_database_url(self):
         if self.DATABASE_URL:
