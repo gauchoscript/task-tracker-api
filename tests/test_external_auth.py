@@ -16,6 +16,7 @@ os.environ["REDIS_PORT"] = "6379"
 import pytest
 from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.auth import AuthService
 from app.schemas.auth import AuthRequest
 
@@ -87,13 +88,14 @@ async def test_signin_failure(error_code, error_message):
 @pytest.mark.asyncio
 async def test_signup_success():
     signup_data = AuthRequest(email="newuser@example.com", password="password123")
+    mock_db = MagicMock(spec=AsyncSession)
     
     with patch("boto3.client") as mock_boto:
         mock_client = MagicMock()
         mock_boto.return_value = mock_client
-        mock_client.sign_up.return_value = {}
+        mock_client.sign_up.return_value = {"UserSub": "fake-sub-123"}
         
-        result = await AuthService.signup(signup_data)
+        result = await AuthService.signup(signup_data, mock_db)
         
         assert result is True
         
@@ -105,6 +107,7 @@ async def test_signup_success():
 @pytest.mark.asyncio
 async def test_signup_failure():
     signup_data = AuthRequest(email="newuser@example.com", password="password123")
+    mock_db = MagicMock(spec=AsyncSession)
     
     with patch("boto3.client") as mock_boto:
         mock_client = MagicMock()
@@ -114,6 +117,6 @@ async def test_signup_failure():
             "SignUp"
         )
         
-        result = await AuthService.signup(signup_data)
+        result = await AuthService.signup(signup_data, mock_db)
         
         assert result is False
