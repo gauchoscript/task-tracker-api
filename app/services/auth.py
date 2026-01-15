@@ -3,8 +3,10 @@ import hmac
 import hashlib
 import base64
 from botocore.exceptions import ClientError
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.schemas.auth import AuthRequest, TokenResponse
+from app.models.user import User
 
 class AuthService:
     @staticmethod
@@ -53,9 +55,9 @@ class AuthService:
             raise e
 
     @staticmethod
-    async def signup(signup_data: AuthRequest) -> bool:
+    async def signup(signup_data: AuthRequest, db: AsyncSession) -> bool:
         """
-        Sign-up a new user using Amazon Cognito.
+        Sign-up a new user using Amazon Cognito and save to local DB.
         """
         client = boto3.client("cognito-idp", region_name=settings.COGNITO_REGION)
         
@@ -66,7 +68,7 @@ class AuthService:
                 settings.COGNITO_CLIENT_SECRET
             )
             
-            client.sign_up(
+            response = client.sign_up(
                 ClientId=settings.COGNITO_APP_CLIENT_ID,
                 Username=signup_data.email,
                 Password=signup_data.password,
@@ -78,6 +80,21 @@ class AuthService:
                     },
                 ],
             )
+            
+            # Save to local DB
+            external_id = response.get("UserSub")
+            if not external_id:
+                # Cognito might not return UserSub if it's already pre-confirmed or other cases
+                # but for sign_up it usually does.
+                return False
+                
+            new_user = User(
+                email=signup_data.email,
+                external_id=external_id
+            )
+            db.add(new_user)
+            await db.commit()
+            
             return True
             
         except ClientError as e:

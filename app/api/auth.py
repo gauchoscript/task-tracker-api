@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from botocore.exceptions import ClientError
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.auth import AuthRequest, TokenResponse
 from app.services.auth import AuthService
+from app.core.database import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -25,12 +27,12 @@ async def signin(signin_data: AuthRequest):
         )
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
-async def signup(signup_data: AuthRequest):
+async def signup(signup_data: AuthRequest, db: AsyncSession = Depends(get_db)):
     """
     Sign-up endpoint calling the service layer.
     """
     try:
-        success = await AuthService.signup(signup_data)
+        success = await AuthService.signup(signup_data, db)
         if success:
             return {"message": "User created successfully. Please check your email for confirmation."}
         
