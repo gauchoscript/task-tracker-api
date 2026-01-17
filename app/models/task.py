@@ -1,13 +1,12 @@
-import uuid
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.models.base import Base
 import enum
+import uuid
 
 class TaskStatus(str, enum.Enum):
     TODO = "todo"
-    IN_PROGRESS = "in_progress"
     DONE = "done"
 
 class Task(Base):
@@ -17,3 +16,6 @@ class Task(Base):
     status = Column(Enum(TaskStatus), default=TaskStatus.TODO)
     
     user_id = Column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
