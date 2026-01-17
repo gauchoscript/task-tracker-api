@@ -190,3 +190,37 @@ def test_get_tasks_success(mock_user):
         assert data[1]["title"] == "Task 2"
         
     app.dependency_overrides.clear()
+
+def test_get_tasks_filter_by_status(mock_user):
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.task.TaskService.get_tasks") as mock_get:
+        # Mocking the service to return only 'todo' tasks when called with status=todo
+        mock_tasks = [
+            Task(
+                id=uuid4(),
+                title="Task 1",
+                description="Description 1",
+                user_id=mock_user.id,
+                status=TaskStatus.TODO,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+        ]
+        mock_get.return_value = mock_tasks
+        
+        response = client.get("/tasks/?status=todo")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["status"] == "todo"
+        
+        # Verify that the service was called with the correct status
+        mock_get.assert_called_once()
+        # The first argument is the DB session (MagicMock), second is user_id, third is status
+        call_args = mock_get.call_args
+        assert call_args[0][1] == mock_user.id
+        assert call_args[0][2] == TaskStatus.TODO
+        
+    app.dependency_overrides.clear()
