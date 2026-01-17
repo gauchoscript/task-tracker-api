@@ -5,20 +5,22 @@ from app.services.task import TaskService
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from typing import List
+from app.models.task import TaskStatus
+from typing import List, Optional
 from uuid import UUID
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 @router.get("/", response_model=List[Task])
 async def get_tasks(
+    status: Optional[TaskStatus] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get all tasks for the authenticated user.
+    Get all tasks for the authenticated user, optionally filtered by status.
     """
-    return await TaskService.get_tasks(db, current_user.id)
+    return await TaskService.get_tasks(db, current_user.id, status)
 
 @router.post("/", response_model=Task, status_code=status.HTTP_201_CREATED)
 async def create_task(

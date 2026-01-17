@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.models.task import Task
+from app.models.task import Task, TaskStatus
 from app.schemas.task import TaskCreate, TaskUpdate
 from uuid import UUID
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class TaskService:
@@ -53,16 +53,19 @@ class TaskService:
         return db_task
 
     @staticmethod
-    async def get_tasks(db: AsyncSession, user_id: UUID) -> list[Task]:
+    async def get_tasks(db: AsyncSession, user_id: UUID, status: Optional[TaskStatus] = None) -> List[Task]:
         """
-        Get all tasks for a user that are not deleted.
+        Get all tasks for a user that are not deleted, optionally filtered by status.
         """
         query = select(Task).where(
             Task.user_id == user_id,
             Task.deleted_at == None
         )
+        if status:
+            query = query.where(Task.status == status)
+            
         result = await db.execute(query)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     @staticmethod
     async def delete_task(db: AsyncSession, task_id: UUID, user_id: UUID) -> bool:
