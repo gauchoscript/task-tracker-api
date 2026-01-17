@@ -37,3 +37,20 @@ async def update_task(
             detail="Task not found or you don't have permission to access it"
         )
     return task
+
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_task(
+    task_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Soft delete a task for the authenticated user.
+    """
+    success = await TaskService.delete_task(db, task_id, current_user.id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found or you don't have permission to access it"
+        )
+    return None

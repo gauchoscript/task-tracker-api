@@ -4,6 +4,7 @@ from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskUpdate
 from uuid import UUID
 from typing import Optional
+from datetime import datetime
 
 class TaskService:
     @staticmethod
@@ -29,9 +30,13 @@ class TaskService:
         user_id: UUID
     ) -> Optional[Task]:
         """
-        Update an existing task if it belongs to the user.
+        Update an existing task if it belongs to the user and is not deleted.
         """
-        query = select(Task).where(Task.id == task_id, Task.user_id == user_id)
+        query = select(Task).where(
+            Task.id == task_id, 
+            Task.user_id == user_id,
+            Task.deleted_at == None
+        )
         result = await db.execute(query)
         db_task = result.scalar_one_or_none()
         
@@ -46,3 +51,24 @@ class TaskService:
         await db.commit()
         await db.refresh(db_task)
         return db_task
+
+    @staticmethod
+    async def delete_task(db: AsyncSession, task_id: UUID, user_id: UUID) -> bool:
+        """
+        Soft delete a task by setting its deleted_at timestamp.
+        """
+        query = select(Task).where(
+            Task.id == task_id, 
+            Task.user_id == user_id,
+            Task.deleted_at == None
+        )
+        result = await db.execute(query)
+        db_task = result.scalar_one_or_none()
+        
+        if not db_task:
+            return False
+            
+        db_task.deleted_at = datetime.utcnow()
+        db.add(db_task)
+        await db.commit()
+        return True
