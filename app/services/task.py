@@ -53,6 +53,18 @@ class TaskService:
         return db_task
 
     @staticmethod
+    async def get_tasks(db: AsyncSession, user_id: UUID) -> list[Task]:
+        """
+        Get all tasks for a user that are not deleted.
+        """
+        query = select(Task).where(
+            Task.user_id == user_id,
+            Task.deleted_at == None
+        )
+        result = await db.execute(query)
+        return result.scalars().all()
+
+    @staticmethod
     async def delete_task(db: AsyncSession, task_id: UUID, user_id: UUID) -> bool:
         """
         Soft delete a task by setting its deleted_at timestamp.
