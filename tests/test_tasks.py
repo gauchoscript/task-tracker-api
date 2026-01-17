@@ -109,3 +109,48 @@ def test_update_task_not_found(mock_user):
         assert response.json()["detail"] == "Task not found or you don't have permission to access it"
         
     app.dependency_overrides.clear()
+
+def test_delete_task_success(mock_user):
+    task_id = uuid4()
+    
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.task.TaskService.delete_task") as mock_delete:
+        mock_delete.return_value = True
+        
+        response = client.delete(f"/tasks/{task_id}")
+        
+        assert response.status_code == 204
+        
+    app.dependency_overrides.clear()
+
+def test_delete_task_not_found(mock_user):
+    task_id = uuid4()
+    
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.task.TaskService.delete_task") as mock_delete:
+        mock_delete.return_value = False
+        
+        response = client.delete(f"/tasks/{task_id}")
+        
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Task not found or you don't have permission to access it"
+        
+    app.dependency_overrides.clear()
+
+def test_update_deleted_task(mock_user):
+    task_id = uuid4()
+    update_data = {"title": "Updated Title"}
+    
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.task.TaskService.update_task") as mock_update:
+        # Service should return None if task is deleted or not found
+        mock_update.return_value = None
+        
+        response = client.patch(f"/tasks/{task_id}", json=update_data)
+        
+        assert response.status_code == 404
+        
+    app.dependency_overrides.clear()
