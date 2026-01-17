@@ -4,7 +4,7 @@ from app.models.task import Task, TaskStatus
 from app.schemas.task import TaskCreate, TaskUpdate
 from uuid import UUID
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 class TaskService:
     @staticmethod
@@ -83,7 +83,7 @@ class TaskService:
         if not db_task:
             return False
             
-        db_task.deleted_at = datetime.utcnow()
+        db_task.deleted_at = datetime.now(timezone.utc)
         db.add(db_task)
         await db.commit()
         return True

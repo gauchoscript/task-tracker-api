@@ -6,7 +6,7 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.task import Task, TaskStatus
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 
 client = TestClient(app)
 
@@ -36,8 +36,8 @@ def test_create_task_success(mock_user):
             description=task_data["description"],
             user_id=mock_user.id,
             status=TaskStatus.TODO,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         mock_create.return_value = mock_task
         
@@ -80,8 +80,8 @@ def test_update_task_success(mock_user):
             description="Old Description",
             user_id=mock_user.id,
             status=TaskStatus.DONE,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         mock_update.return_value = mock_task
         
@@ -166,8 +166,8 @@ def test_get_tasks_success(mock_user):
                 description="Description 1",
                 user_id=mock_user.id,
                 status=TaskStatus.TODO,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             ),
             Task(
                 id=uuid4(),
@@ -175,8 +175,8 @@ def test_get_tasks_success(mock_user):
                 description="Description 2",
                 user_id=mock_user.id,
                 status=TaskStatus.DONE,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
         ]
         mock_get.return_value = mock_tasks
@@ -203,8 +203,8 @@ def test_get_tasks_filter_by_status(mock_user):
                 description="Description 1",
                 user_id=mock_user.id,
                 status=TaskStatus.TODO,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
         ]
         mock_get.return_value = mock_tasks
