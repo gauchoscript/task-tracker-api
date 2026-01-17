@@ -154,3 +154,39 @@ def test_update_deleted_task(mock_user):
         assert response.status_code == 404
         
     app.dependency_overrides.clear()
+
+def test_get_tasks_success(mock_user):
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.task.TaskService.get_tasks") as mock_get:
+        mock_tasks = [
+            Task(
+                id=uuid4(),
+                title="Task 1",
+                description="Description 1",
+                user_id=mock_user.id,
+                status=TaskStatus.TODO,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            ),
+            Task(
+                id=uuid4(),
+                title="Task 2",
+                description="Description 2",
+                user_id=mock_user.id,
+                status=TaskStatus.DONE,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+        ]
+        mock_get.return_value = mock_tasks
+        
+        response = client.get("/tasks/")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["title"] == "Task 1"
+        assert data[1]["title"] == "Task 2"
+        
+    app.dependency_overrides.clear()
