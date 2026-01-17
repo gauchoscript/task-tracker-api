@@ -66,3 +66,46 @@ def test_create_task_unauthorized():
     
     # Since OAuth2PasswordBearer is used, it should return 401 if no Authorization header is present
     assert response.status_code == 401
+
+def test_update_task_success(mock_user):
+    task_id = uuid4()
+    update_data = {"title": "Updated Title", "status": "done"}
+    
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.task.TaskService.update_task") as mock_update:
+        mock_task = Task(
+            id=task_id,
+            title=update_data["title"],
+            description="Old Description",
+            user_id=mock_user.id,
+            status=TaskStatus.DONE,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        mock_update.return_value = mock_task
+        
+        response = client.patch(f"/tasks/{task_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["title"] == update_data["title"]
+        assert data["status"] == "done"
+        
+    app.dependency_overrides.clear()
+
+def test_update_task_not_found(mock_user):
+    task_id = uuid4()
+    update_data = {"title": "Updated Title"}
+    
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.task.TaskService.update_task") as mock_update:
+        mock_update.return_value = None
+        
+        response = client.patch(f"/tasks/{task_id}", json=update_data)
+        
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Task not found or you don't have permission to access it"
+        
+    app.dependency_overrides.clear()
