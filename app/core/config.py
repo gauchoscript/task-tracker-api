@@ -1,4 +1,4 @@
-from pydantic import ConfigDict, field_validator
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 from typing import Optional, Any
 
@@ -19,14 +19,11 @@ class Settings(BaseSettings):
     COGNITO_CLIENT_SECRET: str
     COGNITO_REGION: str
 
-    BACKEND_CORS_ORIGINS: list[str] = []
+    BACKEND_CORS_ORIGINS: str = ""
 
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
-    @classmethod
-    def assemble_cors_origins(cls, v: Any) -> Any:
-        if isinstance(v, str):
-            return [i.strip() for i in v.split(",") if i.strip()]
-        return v
+    @property
+    def backend_cors_origins(self) -> list[str]:
+        return [i.strip() for i in self.BACKEND_CORS_ORIGINS.split(",") if i.strip()]
 
     DATABASE_URL: Optional[str] = None
 
