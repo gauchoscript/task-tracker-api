@@ -1,6 +1,6 @@
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_validator
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, Any
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Task Tracker API"
@@ -18,6 +18,15 @@ class Settings(BaseSettings):
     COGNITO_APP_CLIENT_ID: str
     COGNITO_CLIENT_SECRET: str
     COGNITO_REGION: str
+
+    BACKEND_CORS_ORIGINS: list[str] = []
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return [i.strip() for i in v.split(",") if i.strip()]
+        return v
 
     DATABASE_URL: Optional[str] = None
 
