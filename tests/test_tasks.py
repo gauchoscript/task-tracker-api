@@ -22,7 +22,8 @@ def test_create_task_success(mock_user):
     # Mock data
     task_data = {
         "title": "Test Task",
-        "description": "Test Description"
+        "description": "Test Description",
+        "due_date": "2026-12-31T23:59:59"
     }
     
     # Override the dependency to return our mock user
@@ -34,6 +35,7 @@ def test_create_task_success(mock_user):
             id=uuid4(),
             title=task_data["title"],
             description=task_data["description"],
+            due_date=datetime.fromisoformat(task_data["due_date"]),
             user_id=mock_user.id,
             status=TaskStatus.TODO,
             created_at=datetime.now(timezone.utc),
@@ -47,6 +49,7 @@ def test_create_task_success(mock_user):
         data = response.json()
         assert data["title"] == task_data["title"]
         assert data["description"] == task_data["description"]
+        assert data["due_date"] == task_data["due_date"]
         assert "id" in data
         assert "created_at" in data
         assert "updated_at" in data
@@ -69,7 +72,11 @@ def test_create_task_unauthorized():
 
 def test_update_task_success(mock_user):
     task_id = uuid4()
-    update_data = {"title": "Updated Title", "status": "done"}
+    update_data = {
+        "title": "Updated Title", 
+        "status": "done",
+        "due_date": "2026-06-01T00:00:00"
+    }
     
     app.dependency_overrides[get_current_user] = lambda: mock_user
     
@@ -78,6 +85,7 @@ def test_update_task_success(mock_user):
             id=task_id,
             title=update_data["title"],
             description="Old Description",
+            due_date=datetime.fromisoformat(update_data["due_date"]),
             user_id=mock_user.id,
             status=TaskStatus.DONE,
             created_at=datetime.now(timezone.utc),
@@ -91,6 +99,7 @@ def test_update_task_success(mock_user):
         data = response.json()
         assert data["title"] == update_data["title"]
         assert data["status"] == "done"
+        assert data["due_date"] == update_data["due_date"]
         
     app.dependency_overrides.clear()
 
