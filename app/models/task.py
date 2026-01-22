@@ -14,6 +14,7 @@ class Task(Base):
     title = Column(String, nullable=False)
     description = Column(String)
     status = Column(Enum(TaskStatus), default=TaskStatus.TODO)
+    due_date = Column(DateTime(timezone=True), nullable=True)
     
     user_id = Column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
     

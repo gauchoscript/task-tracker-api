@@ -15,6 +15,7 @@ class TaskService:
         db_task = Task(
             title=task_in.title,
             description=task_in.description,
+            due_date=task_in.due_date,
             user_id=user_id
         )
         db.add(db_task)
