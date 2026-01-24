@@ -18,7 +18,8 @@ class Settings(BaseSettings):
     COGNITO_APP_CLIENT_ID: str
     COGNITO_CLIENT_SECRET: str
     COGNITO_REGION: str
-
+    
+    ENVIRONMENT: str = "development"
     BACKEND_CORS_ORIGINS: str = ""
 
     @property

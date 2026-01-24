@@ -6,13 +6,20 @@ from app.api.tasks import router as tasks_router
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.backend_cors_origins],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+cors_kwargs = {
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+
+if settings.ENVIRONMENT == "development":
+    # In development, we allow any origin via regex to facilitate mobile/local testing
+    cors_kwargs["allow_origin_regex"] = r"https?://.*"
+else:
+    # In production, we require explicit origins
+    cors_kwargs["allow_origins"] = [str(origin) for origin in settings.backend_cors_origins]
+
+app.add_middleware(CORSMiddleware, **cors_kwargs)
 
 app.include_router(auth_router)
 app.include_router(tasks_router)
