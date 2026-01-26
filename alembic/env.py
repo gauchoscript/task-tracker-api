@@ -21,6 +21,7 @@ if config.config_file_name is not None:
 from app.models.base import Base
 from app.models.user import User
 from app.models.task import Task
+from app.models.notification import DeviceToken
 # Import other models here so they are registered with Base
 # from app.models.user import User
 target_metadata = Base.metadata
