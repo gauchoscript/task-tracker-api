@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     
     ENVIRONMENT: str = "development"
     BACKEND_CORS_ORIGINS: str = ""
+    # Notification Settings
+    NOTIFICATION_DUE_DATE_DAYS_BEFORE: int = 1  # Notify X days before due
+    NOTIFICATION_STALE_TASK_DAYS: int = 7       # Notify if unchanged for X days
 
     @property
     def backend_cors_origins(self) -> list[str]:

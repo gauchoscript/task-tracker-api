@@ -10,7 +10,7 @@ services:
       - .env
     depends_on:
       - db
-    #  - redis
+      - redis
 
   db:
     image: postgres:15-alpine
@@ -22,32 +22,34 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     ports:
       - "5432:5432"
-  #redis:
-  #  image: redis:7-alpine
-  #  ports:
-  #    - "6379:6379"
 
-  #celery_worker:
-  #  build: .
-  #  command: celery -A app.workers.celery_app worker --loglevel=info
-  #  volumes:
-  #    - .:/app
-  #  env_file:
-  #    - .env
-  #  depends_on:
-  #    - db
-  #    - redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
 
-  #celery_beat:
-  #  build: .
-  #  command: celery -A app.workers.celery_app beat --loglevel=info
-  #  volumes:
-  #    - .:/app
-  #  env_file:
-  #    - .env
-  #  depends_on:
-  #    - db
-  #    - redis
+  celery_worker:
+    build: .
+    command: celery -A app.workers.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+  celery_beat:
+    build: .
+    command: celery -A app.workers.celery_app beat --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
 
 volumes:
   postgres_data:
+

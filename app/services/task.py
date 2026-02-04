@@ -43,8 +43,13 @@ class TaskService:
         
         if not db_task:
             return None
-            
+        
         update_data = task_in.model_dump(exclude_unset=True)
+        
+        # Track if status is changing
+        if 'status' in update_data and update_data['status'] != db_task.status:
+            db_task.status_changed_at = datetime.now(timezone.utc)
+        
         for field, value in update_data.items():
             setattr(db_task, field, value)
             

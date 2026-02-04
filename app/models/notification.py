@@ -1,7 +1,9 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, func
+from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
+import enum
 import uuid
+
 
 class DeviceToken(Base):
     __tablename__ = "device_token"
@@ -14,3 +16,30 @@ class DeviceToken(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     last_used_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class NotificationType(str, enum.Enum):
+    DUE_DATE_APPROACHING = "due_date_approaching"
+    STALE_TASK = "stale_task"
+
+
+class NotificationStatus(str, enum.Enum):
+    PENDING = "pending"
+    SENT = "sent"
+    FAILED = "failed"
+
+
+class Notification(Base):
+    __tablename__ = "notification"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("task.id"), nullable=True)
+    type = Column(Enum(NotificationType), nullable=False)
+    status = Column(Enum(NotificationStatus), default=NotificationStatus.PENDING)
+    
+    scheduled_for = Column(DateTime(timezone=True), nullable=False)
+    sent_at = Column(DateTime(timezone=True), nullable=True)
+    error_message = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
