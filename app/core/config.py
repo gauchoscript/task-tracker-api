@@ -21,9 +21,16 @@ class Settings(BaseSettings):
     
     ENVIRONMENT: str = "development"
     BACKEND_CORS_ORIGINS: str = ""
+
+    # FCM Configuration
+    FCM_PROJECT_ID: Optional[str] = None
+    FCM_CREDENTIALS_PATH: Optional[str] = None
+
     # Notification Settings
     NOTIFICATION_DUE_DATE_DAYS_BEFORE: int = 1  # Notify X days before due
     NOTIFICATION_STALE_TASK_DAYS: int = 7       # Notify if unchanged for X days
+    NOTIFICATION_QUIET_HOURS_START: int = 22    # Don't send after 10 PM
+    NOTIFICATION_QUIET_HOURS_END: int = 8       # Don't send before 8 AM
 
     @property
     def backend_cors_origins(self) -> list[str]:

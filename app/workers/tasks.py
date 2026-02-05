@@ -41,3 +41,23 @@ def generate_notifications_task():
     
     return run_async(_generate())
 
+
+@celery_app.task(name="app.workers.tasks.send_notifications_task")
+def send_notifications_task():
+    """
+    Periodic task to send pending notifications.
+    Runs every hour, respects quiet hours.
+    """
+    logger.info("Starting notification send task")
+    
+    async def _send():
+        async with async_session_maker() as db:
+            try:
+                result = await NotificationSender.send_all_pending(db)
+                logger.info(f"Notification send complete: {result}")
+                return result
+            except Exception as e:
+                logger.error(f"Error in notification send: {e}")
+                raise
+    
+    return run_async(_send())

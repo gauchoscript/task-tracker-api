@@ -28,5 +28,9 @@ celery_app.conf.beat_schedule = {
     "generate-notifications": {
         "task": "app.workers.tasks.generate_notifications_task",
         "schedule": 43200.0,  # Every 12 hours (in seconds)
-    }
+    },
+    "send-notifications": {
+        "task": "app.workers.tasks.send_notifications_task",
+        "schedule": 3600.0,  # Every hour (in seconds)
+    },
 }
