@@ -9,3 +9,4 @@ venv/
 postgres_data/
 *.egg-info/
 celerybeat-schedule
+credentials/
