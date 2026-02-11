@@ -1,16 +1,20 @@
 import boto3
+import logging
 import hmac
 import hashlib
 import base64
 from botocore.exceptions import ClientError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.core.config import settings
 from app.schemas.auth import AuthRequest, TokenResponse
 from app.models.user import User
 
+logger = logging.getLogger(__name__)
+
 class AuthService:
     @staticmethod
-    async def signin(signin_data: AuthRequest) -> TokenResponse:
+    async def signin(signin_data: AuthRequest, db: AsyncSession) -> TokenResponse:
         """
         Sign-in using Amazon Cognito.
         """
@@ -36,6 +40,14 @@ class AuthService:
             auth_result = response.get("AuthenticationResult")
             if not auth_result:
                 return None
+            
+            # Check if user exists in local DB
+            result = await db.execute(select(User).where(User.email == signin_data.email))
+            user = result.scalar_one_or_none()
+            
+            if not user:
+                logger.warning(f"User {signin_data.email} exists in Cognito but not in local DB")
+                return None
                 
             return TokenResponse(
                 access_token=auth_result["AccessToken"],
@@ -43,7 +55,7 @@ class AuthService:
             )
             
         except ClientError as e:
-            print(e)
+            logger.error(f"Cognito signin error: {e}")
             error_code = e.response["Error"]["Code"]
             if error_code in [
                 "NotAuthorizedException", 
@@ -98,7 +110,7 @@ class AuthService:
             return True
             
         except ClientError as e:
-            print(e)
+            logger.error(f"Cognito signup error: {e}")
             return False
     @staticmethod
     def _calculate_secret_hash(username: str, client_id: str, client_secret: str) -> str:

@@ -8,12 +8,12 @@ from app.core.database import get_db
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/signin", response_model=TokenResponse)
-async def signin(signin_data: AuthRequest):
+async def signin(signin_data: AuthRequest, db: AsyncSession = Depends(get_db)):
     """
     Sign-in endpoint calling the service layer.
     """
     try:
-        result = await AuthService.signin(signin_data)
+        result = await AuthService.signin(signin_data, db)
         if result:
             return result
         raise HTTPException(

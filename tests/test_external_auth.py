@@ -41,6 +41,12 @@ def test_calculate_secret_hash():
 @pytest.mark.asyncio
 async def test_signin_success():
     signin_data = AuthRequest(email="test@example.com", password="password123")
+    mock_db = MagicMock(spec=AsyncSession)
+    
+    # Mock local user existence
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = MagicMock()
+    mock_db.execute.return_value = mock_result
     
     with patch("boto3.client") as mock_boto:
         mock_client = MagicMock()
@@ -52,7 +58,7 @@ async def test_signin_success():
             }
         }
         
-        result = await AuthService.signin(signin_data)
+        result = await AuthService.signin(signin_data, mock_db)
         
         assert result is not None
         assert result.access_token == "fake_access_token"
@@ -64,6 +70,31 @@ async def test_signin_success():
         assert len(auth_params["SECRET_HASH"]) > 0
 
 @pytest.mark.asyncio
+async def test_signin_failure_local_user_missing():
+    signin_data = AuthRequest(email="test@example.com", password="password123")
+    mock_db = MagicMock(spec=AsyncSession)
+    
+    # Mock user NOT existing in local DB
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_db.execute.return_value = mock_result
+    
+    with patch("boto3.client") as mock_boto:
+        mock_client = MagicMock()
+        mock_boto.return_value = mock_client
+        mock_client.initiate_auth.return_value = {
+            "AuthenticationResult": {
+                "AccessToken": "fake_access_token",
+                "TokenType": "Bearer"
+            }
+        }
+        
+        result = await AuthService.signin(signin_data, mock_db)
+        
+        # Should be None even if Cognito succeeded
+        assert result is None
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("error_code, error_message", [
     ("NotAuthorizedException", "Incorrect username or password"),
     ("UserNotFoundException", "User does not exist"),
@@ -72,6 +103,7 @@ async def test_signin_success():
 ])
 async def test_signin_failure(error_code, error_message):
     signin_data = AuthRequest(email="test@example.com", password="password123")
+    mock_db = MagicMock(spec=AsyncSession)
     
     with patch("boto3.client") as mock_boto:
         mock_client = MagicMock()
@@ -81,7 +113,7 @@ async def test_signin_failure(error_code, error_message):
             "InitiateAuth"
         )
         
-        result = await AuthService.signin(signin_data)
+        result = await AuthService.signin(signin_data, mock_db)
         
         assert result is None
 
