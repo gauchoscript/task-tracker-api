@@ -75,7 +75,7 @@ jobs:
               "docker pull '"${IMAGE_TAG}"'",
               "docker tag '"${IMAGE_TAG}"' app:latest",
               "docker compose run --rm api alembic upgrade head || true",
-              "docker compose stop celery",
+              "docker compose stop celery_worker",
               "sleep 5",
               "docker compose up -d",
               "docker image prune -f",
