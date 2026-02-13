@@ -71,16 +71,16 @@ jobs:
             --parameters 'commands=[
               "set -e",
               "cd ${{ secrets.SERVER_DEPLOY_PATH }}",
-              "git pull",
-              "echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin",
-              "docker pull '"${IMAGE_TAG}"'",
-              "docker tag '"${IMAGE_TAG}"' ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest",
-              "docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head || true",
-              "docker compose -f docker-compose.prod.yml stop celery_worker",
+              "sudo -u ubuntu git pull origin main",
+              "echo ${{ secrets.GITHUB_TOKEN }} | sudo -u ubuntu docker login ghcr.io -u ${{ github.actor }} --password-stdin",
+              "sudo -u ubuntu docker pull '"${IMAGE_TAG}"'",
+              "sudo -u ubuntu docker tag '"${IMAGE_TAG}"' app:latest",
+              "sudo -u ubuntu docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head || true",
+              "sudo -u ubuntu docker compose -f docker-compose.prod.yml stop celery",
               "sleep 5",
-              "docker compose -f docker-compose.prod.yml up -d",
-              "docker image prune -f",
-              "docker compose -f docker-compose.prod.yml ps"
+              "sudo -u ubuntu docker compose -f docker-compose.prod.yml up -d",
+              "sudo -u ubuntu docker image prune -f",
+              "sudo -u ubuntu docker compose -f docker-compose.prod.yml ps"
             ]' \
             --timeout-seconds 300 \
             --output text \
