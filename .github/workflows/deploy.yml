@@ -74,12 +74,12 @@ jobs:
               "echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin",
               "docker pull '"${IMAGE_TAG}"'",
               "docker tag '"${IMAGE_TAG}"' app:latest",
-              "docker-compose run --rm api alembic upgrade head || true",
-              "docker-compose stop celery",
+              "docker compose run --rm api alembic upgrade head || true",
+              "docker compose stop celery",
               "sleep 5",
-              "docker-compose up -d",
+              "docker compose up -d",
               "docker image prune -f",
-              "docker-compose ps"
+              "docker compose ps"
             ]' \
             --timeout-seconds 300 \
             --output text \
@@ -130,4 +130,3 @@ jobs:
             --instance-id "${{ secrets.AWS_SSM_INSTANCE_ID }}" \
             --query 'StandardOutputContent' \
             --output text
-            
