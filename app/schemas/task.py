@@ -1,13 +1,20 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from uuid import UUID
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 from app.models.task import TaskStatus
 
 class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
     due_date: Optional[datetime] = None
+
+    @field_validator("due_date", mode="before")
+    @classmethod
+    def parse_empty_string_to_none(cls, v: Any) -> Any:
+        if v == "":
+            return None
+        return v
 
 class TaskCreate(TaskBase):
     pass
@@ -17,6 +24,13 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = None
     status: Optional[TaskStatus] = None
     due_date: Optional[datetime] = None
+
+    @field_validator("due_date", mode="before")
+    @classmethod
+    def parse_empty_string_to_none(cls, v: Any) -> Any:
+        if v == "":
+            return None
+        return v
 
 class Task(TaskBase):
     id: UUID
