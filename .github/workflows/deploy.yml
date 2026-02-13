@@ -76,7 +76,7 @@ jobs:
               "sudo -u ubuntu docker pull '"${IMAGE_TAG}"'",
               "sudo -u ubuntu docker tag '"${IMAGE_TAG}"' app:latest",
               "sudo -u ubuntu docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head || true",
-              "sudo -u ubuntu docker compose -f docker-compose.prod.yml stop celery",
+              "sudo -u ubuntu docker compose -f docker-compose.prod.yml stop celery_worker",
               "sleep 5",
               "sudo -u ubuntu docker compose -f docker-compose.prod.yml up -d",
               "sudo -u ubuntu docker image prune -f",
