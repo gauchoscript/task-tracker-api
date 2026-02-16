@@ -8,6 +8,7 @@ class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
     due_date: Optional[datetime] = None
+    position: Optional[int] = 0
 
     @field_validator("due_date", mode="before")
     @classmethod
@@ -24,6 +25,7 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = None
     status: Optional[TaskStatus] = None
     due_date: Optional[datetime] = None
+    position: Optional[int] = None
 
     @field_validator("due_date", mode="before")
     @classmethod

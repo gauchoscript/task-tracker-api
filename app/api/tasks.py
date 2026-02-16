@@ -51,6 +51,27 @@ async def update_task(
         )
     return task
 
+@router.patch("/{task_id}/move", response_model=Task)
+async def move_task(
+    task_id: UUID,
+    above_id: Optional[UUID] = None,
+    below_id: Optional[UUID] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Move a task relative to other tasks.
+    Provide above_id to place below it, or below_id to place above it.
+    If both provided, place between them.
+    """
+    task = await TaskService.move_task(db, task_id, current_user.id, above_id, below_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Could not move task. Ensure the IDs are valid and belong to you."
+        )
+    return task
+
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(
     task_id: UUID,
