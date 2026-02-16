@@ -1,10 +1,11 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from fastapi.testclient import TestClient
 from app.main import app
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.task import Task, TaskStatus
+from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import uuid4
 from datetime import datetime, timezone
 
@@ -233,3 +234,117 @@ def test_get_tasks_filter_by_status(mock_user):
         assert call_args[0][2] == TaskStatus.TODO
         
     app.dependency_overrides.clear()
+
+def test_move_task_success(mock_user):
+    task_id = uuid4()
+    above_id = uuid4()
+    
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.task.TaskService.move_task") as mock_move:
+        mock_task = Task(
+            id=task_id,
+            title="Moved Task",
+            user_id=mock_user.id,
+            position=1500,
+            status=TaskStatus.TODO,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
+        )
+        mock_move.return_value = mock_task
+        
+        response = client.patch(f"/tasks/{task_id}/move", params={"above_id": str(above_id)})
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(task_id)
+        assert data["position"] == 1500
+        mock_move.assert_called_once()
+        
+    app.dependency_overrides.clear()
+
+def test_move_task_failure(mock_user):
+    task_id = uuid4()
+    
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.task.TaskService.move_task") as mock_move:
+        mock_move.return_value = None
+        
+        response = client.patch(f"/tasks/{task_id}/move")
+        
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Could not move task. Ensure the IDs are valid and belong to you."
+        
+    app.dependency_overrides.clear()
+
+@pytest.mark.asyncio
+async def test_create_task_position_logic():
+    from app.services.task import TaskService
+    
+    db = AsyncMock(spec=AsyncSession)
+    user_id = uuid4()
+    
+    # Mock result and scalar
+    mock_result = MagicMock()
+    db.execute.return_value = mock_result
+    
+    # Case 1: First task for user
+    mock_result.scalar.return_value = None
+    task_in = MagicMock(title="Task 1", description=None, due_date=None)
+    
+    task = await TaskService.create_task(db, task_in, user_id)
+    assert task.position == 0
+    
+    # Case 2: Subsequent tasks
+    mock_result.scalar.return_value = 1000
+    task_in = MagicMock(title="Task 2", description=None, due_date=None)
+    
+    task = await TaskService.create_task(db, task_in, user_id)
+    assert task.position == 2000
+
+@pytest.mark.asyncio
+async def test_move_task_gap_logic():
+    from app.services.task import TaskService
+    
+    db = AsyncMock(spec=AsyncSession)
+    user_id = uuid4()
+    task_id = uuid4()
+    above_id = uuid4()
+    below_id = uuid4()
+    
+    # helper to produce result mocks
+    def get_mock_result(val):
+        m = MagicMock()
+        m.scalar_one_or_none.return_value = val
+        m.scalar.return_value = val
+        return m
+
+    # Test 1: Move between two tasks
+    task_to_move = Task(id=task_id, user_id=user_id, position=1000)
+    db.execute.side_effect = [
+        get_mock_result(task_to_move),
+        get_mock_result(3000), # pos_above
+        get_mock_result(2000), # pos_below
+    ]
+    
+    task = await TaskService.move_task(db, task_id, user_id, above_id=above_id, below_id=below_id)
+    assert task.position == 2500  # (3000 + 2000) // 2
+    
+    # Test 2: Move to the top (above is None)
+    task_to_move = Task(id=task_id, user_id=user_id, position=2500)
+    db.execute.side_effect = [
+        get_mock_result(task_to_move),
+        get_mock_result(2000), # pos_below
+    ]
+    task = await TaskService.move_task(db, task_id, user_id, above_id=None, below_id=below_id)
+    assert task.position == 3000  # 2000 + 1000
+    
+    # Test 3: Move to the bottom (below is None)
+    task_to_move = Task(id=task_id, user_id=user_id, position=3000)
+    db.execute.side_effect = [
+        get_mock_result(task_to_move),
+        get_mock_result(3000), # pos_above
+    ]
+    task = await TaskService.move_task(db, task_id, user_id, above_id=above_id, below_id=None)
+    assert task.position == 2000  # 3000 - 1000
