@@ -253,7 +253,7 @@ def test_move_task_success(mock_user):
         )
         mock_move.return_value = mock_task
         
-        response = client.patch(f"/tasks/{task_id}/move", params={"above_id": str(above_id)})
+        response = client.patch(f"/tasks/{task_id}/move", json={"above_id": str(above_id)})
         
         assert response.status_code == 200
         data = response.json()
@@ -271,7 +271,7 @@ def test_move_task_failure(mock_user):
     with patch("app.services.task.TaskService.move_task") as mock_move:
         mock_move.return_value = None
         
-        response = client.patch(f"/tasks/{task_id}/move")
+        response = client.patch(f"/tasks/{task_id}/move", json={})
         
         assert response.status_code == 400
         assert response.json()["detail"] == "Could not move task. Ensure the IDs are valid and belong to you."
