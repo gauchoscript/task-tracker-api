@@ -43,3 +43,7 @@ class Task(TaskBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class TaskMove(BaseModel):
+    above_id: Optional[UUID] = None
+    below_id: Optional[UUID] = None

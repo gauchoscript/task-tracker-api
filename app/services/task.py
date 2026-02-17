@@ -130,26 +130,18 @@ class TaskService:
 
         # 3. Calculate new position
         if pos_above is None and pos_below is None:
-            # No references provided? Just keep as is or move to top if that's the intent.
-            # Usually wouldn't happen if UI is correct.
             return task_to_move
 
         if pos_above is None:
-            # Moving to the absolute top
             new_position = pos_below + 1000
         elif pos_below is None:
-            # Moving to the absolute bottom
             new_position = pos_above - 1000
         else:
-            # Moving between two tasks
-            # DESC order: pos_above > new_position > pos_below
             new_position = (pos_above + pos_below) // 2
             
             # Conflict check: if the difference is too small, we might need a re-gap.
-            # But with 1000 start, this takes many moves to close.
             if new_position == pos_above or new_position == pos_below:
-                # Emergency re-gap logic could go here if gap is 0/1.
-                # For now, let's just shift slightly or handle it simply.
+                # TODO: Emergency re-gap logic could go here if gap is 0.
                 # Since we have large gaps, we'll assume this is rare.
                 pass
 
