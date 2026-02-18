@@ -15,8 +15,8 @@ This is the backend API for **Tasflou**, a modern task management system designe
 ## 🎯 Project Goals
 Tasflou was built as a comprehensive portfolio project to demonstrate mastery over the entire software development lifecycle—from architectural design and frontend optimization to cloud deployment and CI/CD automation. The focus was on creating a production-ready, accessible, and performant application that mirrors industry-standard engineering practices.
 
-🚀 **Live Demo:** [gauchoscript.dev/projects/tasflou](https://www.gauchoscript.dev/projects/tasflou)  
-💻 **Frontend Repository:** [Tasflou Web](https://github.com/gauchoscript/tasflou)
+🚀 [**Live Demo**](https://www.gauchoscript.dev/projects/tasflou)  
+💻 [**Frontend Repository**](https://github.com/gauchoscript/task-tracker-web-client)
 
 
 ## 🛠 Technical Stack
