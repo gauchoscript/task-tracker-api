@@ -9,7 +9,7 @@ from sqlalchemy import and_
 from app.models.notification import Notification, NotificationType, NotificationStatus
 from app.models.notification import DeviceToken
 from app.models.task import Task
-from app.services.notification_templates import get_notification_message
+from app.services.notification_templates import format_notification
 from app.core.config import settings
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
@@ -93,7 +93,13 @@ class NotificationSender:
         return result.scalar_one_or_none()
     
     @classmethod
-    def _send_fcm_message(cls, tokens: List[str], title: str, body: str) -> tuple[int, int, Optional[str]]:
+    def _send_fcm_message(
+        cls, 
+        tokens: List[str], 
+        title: str, 
+        body: str, 
+        data: Optional[dict] = None
+    ) -> tuple[int, int, Optional[str]]:
         """
         Send FCM message to multiple tokens.
         
@@ -113,6 +119,7 @@ class NotificationSender:
                     title=title,
                     body=body
                 ),
+                data=data,
                 tokens=tokens
             )
             response = messaging.send_each_for_multicast(message)
@@ -155,24 +162,12 @@ class NotificationSender:
                 await db.commit()
                 return False
             
-            # Generate message from template
-            format_kwargs = {
-                "due_date": task.due_date.strftime("%Y-%m-%d") if task.due_date else "N/A",
-                "status": task.status.value if task.status else "unknown",
-            }
-            
-            # Add specific context for stale tasks
-            if notification.type == NotificationType.STALE_TASK and task.status_changed_at:
-                format_kwargs["days"] = (datetime.now(timezone.utc) - task.status_changed_at).days
-            
-            title, body = get_notification_message(
-                notification.type,
-                task.title,
-                **format_kwargs
-            )
+            # Generate message from template using helper
+            title, body = format_notification(notification.type, task)
             
             # Send via FCM
-            success, failures, error = cls._send_fcm_message(tokens, title, body)
+            data = {"notification_id": str(notification.id)}
+            success, failures, error = cls._send_fcm_message(tokens, title, body, data=data)
             
             if success > 0:
                 notification.status = NotificationStatus.SENT

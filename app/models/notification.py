@@ -29,6 +29,11 @@ class NotificationStatus(str, enum.Enum):
     FAILED = "failed"
 
 
+class ReadSource(str, enum.Enum):
+    WEB_PUSH = "web_push"
+    WEB_CLIENT = "web_client"
+
+
 class Notification(Base):
     __tablename__ = "notification"
     
@@ -41,5 +46,8 @@ class Notification(Base):
     scheduled_for = Column(DateTime(timezone=True), nullable=False)
     sent_at = Column(DateTime(timezone=True), nullable=True)
     error_message = Column(Text, nullable=True)
+    
+    read_at = Column(DateTime(timezone=True), nullable=True)
+    read_source = Column(Enum(ReadSource), nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
