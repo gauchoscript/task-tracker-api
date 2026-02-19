@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
@@ -29,3 +29,9 @@ class NotificationResponse(BaseModel):
 
 class MarkReadRequest(BaseModel):
     read_source: ReadSource
+
+class NotificationPaginated(BaseModel):
+    items: List[NotificationResponse]
+    total: int
+    skip: int
+    limit: int

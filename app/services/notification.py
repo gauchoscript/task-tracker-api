@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import desc, nullsfirst
+from sqlalchemy import desc, nullsfirst, func
 from sqlalchemy.orm import joinedload
 import logging
 from datetime import datetime, timezone
@@ -77,11 +77,19 @@ class NotificationService:
         user_id: UUID,
         skip: int = 0,
         limit: int = 20
-    ) -> List[Notification]:
+    ) -> tuple[List[Notification], int]:
         """
         Get sent notifications for a user with pagination, unread ones first.
-        Includes title and message populated from templates.
+        Returns a tuple of (notifications, total_count).
         """
+        # Count total notifications for the user
+        count_query = select(func.count()).select_from(Notification).where(
+            Notification.user_id == user_id,
+            Notification.status == NotificationStatus.SENT
+        )
+        count_result = await db.execute(count_query)
+        total_count = count_result.scalar() or 0
+
         query = select(Notification).where(
             Notification.user_id == user_id,
             Notification.status == NotificationStatus.SENT
@@ -91,6 +99,7 @@ class NotificationService:
             nullsfirst(Notification.read_at),
             desc(Notification.created_at)
         ).offset(skip).limit(limit)
+        
         result = await db.execute(query)
         notifications = list(result.scalars().all())
         
@@ -104,7 +113,7 @@ class NotificationService:
             else:
                 logger.error(f"Orphan notification found: {n.id} for user {user_id}. Task {n.task_id} is missing.")
                 
-        return valid_notifications
+        return valid_notifications, total_count
 
     @staticmethod
     async def mark_notification_read(

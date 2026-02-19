@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.notification import DeviceTokenCreate, DeviceTokenResponse, NotificationResponse, MarkReadRequest
+from app.schemas.notification import DeviceTokenCreate, DeviceTokenResponse, NotificationResponse, MarkReadRequest, NotificationPaginated
 from app.services.notification import NotificationService
 from app.api.deps import get_current_user
 from app.core.database import get_db
@@ -38,7 +38,7 @@ async def unregister_device(
         )
     return None
 
-@router.get("/", response_model=List[NotificationResponse])
+@router.get("/", response_model=NotificationPaginated)
 async def list_notifications(
     skip: int = 0,
     limit: int = 20,
@@ -46,9 +46,15 @@ async def list_notifications(
     current_user: User = Depends(get_current_user)
 ):
     """
-    List sent notifications for the authenticated user with pagination, unread first.
+    List sent notifications for the authenticated user with pagination and metadata, unread first.
     """
-    return await NotificationService.get_notifications_for_user(db, current_user.id, skip=skip, limit=limit)
+    items, total = await NotificationService.get_notifications_for_user(db, current_user.id, skip=skip, limit=limit)
+    return NotificationPaginated(
+        items=items,
+        total=total,
+        skip=skip,
+        limit=limit
+    )
 
 @router.patch("/{notification_id}/read", response_model=NotificationResponse)
 async def mark_notification_as_read(
