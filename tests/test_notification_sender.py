@@ -105,3 +105,20 @@ class TestNotificationSender:
         
         assert result["skipped_quiet_hours"] is False
         assert result["sent"] == 1
+
+    @pytest.mark.asyncio
+    async def test_send_notification_payload(self, mock_db, sample_notification, sample_task):
+        """Test that send_notification passes the notification_id in the FCM payload."""
+        # Setup mocks
+        with patch.object(NotificationSender, 'get_device_tokens_for_user', return_value=["fake-token"]), \
+             patch.object(NotificationSender, 'get_task', return_value=sample_task), \
+             patch.object(NotificationSender, '_send_fcm_message', return_value=(1, 0, None)) as mock_send_fcm:
+            
+            result = await NotificationSender.send_notification(mock_db, sample_notification)
+            
+            assert result is True
+            # Verify _send_fcm_message was called with the correct data
+            mock_send_fcm.assert_called_once()
+            args, kwargs = mock_send_fcm.call_args
+            assert "data" in kwargs
+            assert kwargs["data"] == {"notification_id": str(sample_notification.id)}

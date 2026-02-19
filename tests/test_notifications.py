@@ -1,10 +1,10 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, ANY
 from fastapi.testclient import TestClient
 from app.main import app
 from app.api.deps import get_current_user
 from app.models.user import User
-from app.models.notification import DeviceToken
+from app.models.notification import DeviceToken, Notification, NotificationType, NotificationStatus, ReadSource
 from uuid import uuid4
 from datetime import datetime, timezone
 
@@ -117,5 +117,123 @@ def test_unregister_device_not_found(mock_user):
         
         assert response.status_code == 404
         assert response.json()["detail"] == "Device token not found for this user"
+        
+    app.dependency_overrides.clear()
+
+def test_list_notifications_success(mock_user):
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.notification.NotificationService.get_notifications_for_user") as mock_get:
+        mock_notifications = [
+            Notification(
+                id=uuid4(),
+                type=NotificationType.DUE_DATE_APPROACHING,
+                read_at=None,
+                sent_at=datetime.now(timezone.utc)
+            ),
+            Notification(
+                id=uuid4(),
+                type=NotificationType.STALE_TASK,
+                read_at=datetime.now(timezone.utc),
+                sent_at=datetime.now(timezone.utc)
+            )
+        ]
+        # Manually add title/message as the service would
+        mock_notifications[0].title = "Task due soon"
+        mock_notifications[0].message = "Test message 1"
+        mock_notifications[1].title = "Task needs attention"
+        mock_notifications[1].message = "Test message 2"
+        
+        mock_get.return_value = mock_notifications
+        
+        response = client.get("/notifications/")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["read_at"] is None
+        assert data[0]["title"] == "Task due soon"
+        assert data[0]["message"] == "Test message 1"
+        assert "user_id" not in data[0]
+        assert "status" not in data[0]
+        
+    app.dependency_overrides.clear()
+
+def test_mark_notification_read_success(mock_user):
+    notification_id = uuid4()
+    read_data = {"read_source": "web_client"}
+    
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.notification.NotificationService.mark_notification_read") as mock_mark:
+        mock_notification = Notification(
+            id=notification_id,
+            type=NotificationType.DUE_DATE_APPROACHING,
+            read_at=datetime.now(timezone.utc),
+            sent_at=datetime.now(timezone.utc)
+        )
+        mock_notification.title = "Task due soon"
+        mock_notification.message = "Test message"
+        mock_mark.return_value = mock_notification
+        
+        response = client.patch(f"/notifications/{notification_id}/read", json=read_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["read_at"] is not None
+        
+    app.dependency_overrides.clear()
+
+def test_mark_notification_read_not_found(mock_user):
+    notification_id = uuid4()
+    read_data = {"read_source": "web_push"}
+    
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.notification.NotificationService.mark_notification_read") as mock_mark:
+        mock_mark.return_value = None
+        
+        response = client.patch(f"/notifications/{notification_id}/read", json=read_data)
+        
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Notification not found"
+        
+    app.dependency_overrides.clear()
+
+def test_mark_notification_read_invalid_id(mock_user):
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    response = client.patch("/notifications/invalid-uuid/read", json={"read_source": "web_push"})
+    
+    # FastAPI returns 422 for validation errors (like invalid UUID format)
+    assert response.status_code == 422
+    
+    app.dependency_overrides.clear()
+
+def test_list_notifications_pagination(mock_user):
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.notification.NotificationService.get_notifications_for_user") as mock_get:
+        # Mocking 2 notifications
+        mock_notifications = [
+            Notification(id=uuid4(), type=NotificationType.DUE_DATE_APPROACHING, read_at=None, sent_at=datetime.now(timezone.utc)),
+            Notification(id=uuid4(), type=NotificationType.STALE_TASK, read_at=None, sent_at=datetime.now(timezone.utc))
+        ]
+        for n in mock_notifications:
+            n.title = "Title"
+            n.message = "Message"
+            
+        mock_get.return_value = mock_notifications
+        
+        # Test default skip/limit
+        response = client.get("/notifications/")
+        assert response.status_code == 200
+        # The mock_get call might use positional or keyword args, using call_args is safer or checking the patch call
+        
+        # Test custom skip/limit
+        response = client.get("/notifications/?skip=10&limit=5")
+        assert response.status_code == 200
+        # Use ANY for the AsyncSession argument
+        mock_get.assert_called_with(ANY, mock_user.id, skip=10, limit=5)
         
     app.dependency_overrides.clear()
