@@ -19,6 +19,7 @@ depends_on = None
 def upgrade() -> None:
     # Create the Enum type for read_source
     read_source_type = sa.Enum('web_push', 'web_client', name='readsource')
+    read_source_type.create(op.get_bind())
     
     op.add_column('notification', sa.Column('read_at', sa.DateTime(timezone=True), nullable=True))
     op.add_column('notification', sa.Column('read_source', read_source_type, nullable=True))
