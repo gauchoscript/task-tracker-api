@@ -144,18 +144,19 @@ def test_list_notifications_success(mock_user):
         mock_notifications[1].title = "Task needs attention"
         mock_notifications[1].message = "Test message 2"
         
-        mock_get.return_value = mock_notifications
+        mock_get.return_value = (mock_notifications, 2)
         
         response = client.get("/notifications/")
         
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 2
-        assert data[0]["read_at"] is None
-        assert data[0]["title"] == "Task due soon"
-        assert data[0]["message"] == "Test message 1"
-        assert "user_id" not in data[0]
-        assert "status" not in data[0]
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
+        assert data["items"][0]["read_at"] is None
+        assert data["items"][0]["title"] == "Task due soon"
+        assert data["items"][0]["message"] == "Test message 1"
+        assert "user_id" not in data["items"][0]
+        assert "status" not in data["items"][0]
         
     app.dependency_overrides.clear()
 
@@ -223,16 +224,24 @@ def test_list_notifications_pagination(mock_user):
             n.title = "Title"
             n.message = "Message"
             
-        mock_get.return_value = mock_notifications
+        mock_get.return_value = (mock_notifications, 100)
         
         # Test default skip/limit
         response = client.get("/notifications/")
         assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 100
+        assert data["skip"] == 0
+        assert data["limit"] == 20
         # The mock_get call might use positional or keyword args, using call_args is safer or checking the patch call
         
         # Test custom skip/limit
         response = client.get("/notifications/?skip=10&limit=5")
         assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 100
+        assert data["skip"] == 10
+        assert data["limit"] == 5
         # Use ANY for the AsyncSession argument
         mock_get.assert_called_with(ANY, mock_user.id, skip=10, limit=5)
         
