@@ -51,7 +51,8 @@ class AuthService:
                 
             return TokenResponse(
                 access_token=auth_result["AccessToken"],
-                token_type=auth_result["TokenType"]
+                token_type=auth_result["TokenType"],
+                refresh_token=auth_result["RefreshToken"]
             )
             
         except ClientError as e:
