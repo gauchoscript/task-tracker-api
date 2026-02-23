@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from botocore.exceptions import ClientError
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.auth import AuthRequest, TokenResponse
+from app.schemas.auth import AuthRequest, TokenResponse, RefreshRequest
 from app.services.auth import AuthService
 from app.core.database import get_db
 
@@ -21,6 +21,25 @@ async def signin(signin_data: AuthRequest, db: AsyncSession = Depends(get_db)):
             detail="Invalid email or password",
         )
     except ClientError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication service error",
+        )
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh(refresh_data: RefreshRequest):
+    """
+    Refresh token endpoint.
+    """
+    try:
+        return await AuthService.refresh_token(refresh_data)
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code in ["NotAuthorizedException", "UserNotFoundException"]:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired, please sign in again"
+            )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication service error",

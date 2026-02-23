@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.config import settings
-from app.schemas.auth import AuthRequest, TokenResponse
+from app.schemas.auth import AuthRequest, TokenResponse, RefreshRequest
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -50,9 +50,10 @@ class AuthService:
                 return None
                 
             return TokenResponse(
-                access_token=auth_result["AccessToken"],
-                token_type=auth_result["TokenType"],
-                refresh_token=auth_result["RefreshToken"]
+                access_token=auth_result.get("AccessToken"),
+                token_type=auth_result.get("TokenType"),
+                refresh_token=auth_result.get("RefreshToken"),
+                expires_in=auth_result.get("ExpiresIn")
             )
             
         except ClientError as e:
@@ -65,6 +66,44 @@ class AuthService:
                 "PasswordResetRequiredException"
             ]:
                 return None
+            raise e
+
+    @staticmethod
+    async def refresh_token(refresh_data: RefreshRequest) -> TokenResponse:
+        """
+        Refresh tokens using REFRESH_TOKEN_AUTH flow.
+        """
+        client = boto3.client("cognito-idp", region_name=settings.COGNITO_REGION)
+        
+        try:
+            secret_hash = AuthService._calculate_secret_hash(
+                refresh_data.email,
+                settings.COGNITO_APP_CLIENT_ID,
+                settings.COGNITO_CLIENT_SECRET
+            )
+            
+            response = client.initiate_auth(
+                ClientId=settings.COGNITO_APP_CLIENT_ID,
+                AuthFlow="REFRESH_TOKEN_AUTH",
+                AuthParameters={
+                    "REFRESH_TOKEN": refresh_data.refresh_token,
+                    "SECRET_HASH": secret_hash,
+                },
+            )
+            
+            auth_result = response.get("AuthenticationResult")
+            if not auth_result:
+                return None
+                
+            return TokenResponse(
+                access_token=auth_result.get("AccessToken"),
+                token_type=auth_result.get("TokenType"),
+                refresh_token=auth_result.get("RefreshToken"),
+                expires_in=auth_result.get("ExpiresIn")
+            )
+            
+        except ClientError as e:
+            logger.error(f"Cognito refresh error: {e}")
             raise e
 
     @staticmethod
