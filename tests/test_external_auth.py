@@ -54,7 +54,9 @@ async def test_signin_success():
         mock_client.initiate_auth.return_value = {
             "AuthenticationResult": {
                 "AccessToken": "fake_access_token",
-                "TokenType": "Bearer"
+                "TokenType": "Bearer",
+                "RefreshToken": "fake_refresh_token",
+                "ExpiresIn": 3600
             }
         }
         
@@ -63,11 +65,61 @@ async def test_signin_success():
         assert result is not None
         assert result.access_token == "fake_access_token"
         assert result.token_type == "Bearer"
+        assert result.refresh_token == "fake_refresh_token"
+        assert result.expires_in == 3600
         
         mock_client.initiate_auth.assert_called_once()
         auth_params = mock_client.initiate_auth.call_args[1]["AuthParameters"]
         assert "SECRET_HASH" in auth_params
         assert len(auth_params["SECRET_HASH"]) > 0
+
+@pytest.mark.asyncio
+async def test_refresh_token_success():
+    from app.schemas.auth import RefreshRequest
+    refresh_data = RefreshRequest(email="test@example.com", refresh_token="old_refresh_token")
+    
+    with patch("boto3.client") as mock_boto:
+        mock_client = MagicMock()
+        mock_boto.return_value = mock_client
+        mock_client.initiate_auth.return_value = {
+            "AuthenticationResult": {
+                "AccessToken": "new_access_token",
+                "TokenType": "Bearer",
+                "ExpiresIn": 3600,
+                "RefreshToken": "new_rotated_refresh_token"
+            }
+        }
+        
+        result = await AuthService.refresh_token(refresh_data)
+        
+        assert result is not None
+        assert result.access_token == "new_access_token"
+        assert result.expires_in == 3600
+        assert result.refresh_token == "new_rotated_refresh_token"
+        
+        mock_client.initiate_auth.assert_called_once()
+        call_args = mock_client.initiate_auth.call_args[1]
+        assert call_args["AuthFlow"] == "REFRESH_TOKEN_AUTH"
+        assert call_args["AuthParameters"]["REFRESH_TOKEN"] == "old_refresh_token"
+        assert "SECRET_HASH" in call_args["AuthParameters"]
+
+@pytest.mark.asyncio
+async def test_refresh_token_failure():
+    from app.schemas.auth import RefreshRequest
+    refresh_data = RefreshRequest(email="test@example.com", refresh_token="invalid_token")
+    
+    with patch("boto3.client") as mock_boto:
+        mock_client = MagicMock()
+        mock_boto.return_value = mock_client
+        mock_client.initiate_auth.side_effect = ClientError(
+            {"Error": {"Code": "NotAuthorizedException", "Message": "Invalid Refresh Token"}},
+            "InitiateAuth"
+        )
+        
+        with pytest.raises(ClientError) as excinfo:
+            await AuthService.refresh_token(refresh_data)
+        
+        assert excinfo.value.response["Error"]["Code"] == "NotAuthorizedException"
 
 @pytest.mark.asyncio
 async def test_signin_failure_local_user_missing():
