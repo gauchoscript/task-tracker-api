@@ -40,14 +40,14 @@ class Notification(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
     task_id = Column(UUID(as_uuid=True), ForeignKey("task.id"), nullable=True)
-    type = Column(Enum(NotificationType), nullable=False)
-    status = Column(Enum(NotificationStatus), default=NotificationStatus.PENDING)
+    type = Column(Enum(NotificationType, values_callable=lambda obj: [e.value for e in obj], name="notificationtype"), nullable=False)
+    status = Column(Enum(NotificationStatus, values_callable=lambda obj: [e.value for e in obj], name="notificationstatus"), default=NotificationStatus.PENDING)
     
     scheduled_for = Column(DateTime(timezone=True), nullable=False)
     sent_at = Column(DateTime(timezone=True), nullable=True)
     error_message = Column(Text, nullable=True)
     
     read_at = Column(DateTime(timezone=True), nullable=True)
-    read_source = Column(Enum(ReadSource), nullable=True)
+    read_source = Column(Enum(ReadSource, values_callable=lambda obj: [e.value for e in obj], name="readsource"), nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
