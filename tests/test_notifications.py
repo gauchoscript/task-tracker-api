@@ -5,6 +5,8 @@ from app.main import app
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.notification import DeviceToken, Notification, NotificationType, NotificationStatus, ReadSource
+from app.models.task import Task
+from sqlalchemy.orm import RelationshipProperty
 from uuid import uuid4
 from datetime import datetime, timezone
 
@@ -243,6 +245,18 @@ def test_list_notifications_pagination(mock_user):
         assert data["skip"] == 10
         assert data["limit"] == 5
         # Use ANY for the AsyncSession argument
-        mock_get.assert_called_with(ANY, mock_user.id, skip=10, limit=5)
-        
+    mock_get.assert_called_with(ANY, mock_user.id, skip=10, limit=5)
+    
     app.dependency_overrides.clear()
+
+def test_notification_task_relationship_defined():
+    """
+    Verifies that the SQLAlchemy relationships are correctly defined on the models.
+    """
+    # Check Notification.task
+    assert hasattr(Notification, "task")
+    assert isinstance(Notification.task.property, RelationshipProperty)
+    assert Notification.task.property.target.name == "task"
+    
+    # Check that Task does NOT have notifications (unidirectional)
+    assert not hasattr(Task, "notifications")
