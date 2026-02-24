@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Text, func
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 import enum
@@ -40,6 +41,9 @@ class Notification(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
     task_id = Column(UUID(as_uuid=True), ForeignKey("task.id"), nullable=True)
+    
+    task = relationship("Task")
+    
     type = Column(Enum(NotificationType, values_callable=lambda obj: [e.value for e in obj], name="notificationtype"), nullable=False)
     status = Column(Enum(NotificationStatus, values_callable=lambda obj: [e.value for e in obj], name="notificationstatus"), default=NotificationStatus.PENDING)
     
