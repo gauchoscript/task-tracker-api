@@ -11,7 +11,7 @@ from uuid import UUID
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
-@router.get("/", response_model=List[Task])
+@router.get("", response_model=List[Task])
 async def get_tasks(
     status: Optional[TaskStatus] = None,
     db: AsyncSession = Depends(get_db),
@@ -22,7 +22,7 @@ async def get_tasks(
     """
     return await TaskService.get_tasks(db, current_user.id, status)
 
-@router.post("/", response_model=Task, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=Task, status_code=status.HTTP_201_CREATED)
 async def create_task(
     task_in: TaskCreate,
     db: AsyncSession = Depends(get_db),

@@ -38,7 +38,7 @@ async def unregister_device(
         )
     return None
 
-@router.get("/", response_model=NotificationPaginated)
+@router.get("", response_model=NotificationPaginated)
 async def list_notifications(
     skip: int = 0,
     limit: int = 20,
