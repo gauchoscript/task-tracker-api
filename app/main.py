@@ -6,7 +6,7 @@ from app.api.tasks import router as tasks_router
 from app.api.notifications import router as notifications_router
 from app.middleware.cloudfront import CloudFrontForwardedProtoMiddleware
 
-app = FastAPI(title=settings.PROJECT_NAME)
+app = FastAPI(title=settings.PROJECT_NAME, redirect_slashes=False)
 
 app.add_middleware(CloudFrontForwardedProtoMiddleware)
 
