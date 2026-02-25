@@ -44,7 +44,7 @@ def test_create_task_success(mock_user):
         )
         mock_create.return_value = mock_task
         
-        response = client.post("/tasks/", json=task_data)
+        response = client.post("/tasks", json=task_data)
         
         assert response.status_code == 201
         data = response.json()
@@ -66,7 +66,7 @@ def test_create_task_unauthorized():
         "description": "Test Description"
     }
     
-    response = client.post("/tasks/", json=task_data)
+    response = client.post("/tasks", json=task_data)
     
     # Since OAuth2PasswordBearer is used, it should return 401 if no Authorization header is present
     assert response.status_code == 401
@@ -191,7 +191,7 @@ def test_get_tasks_success(mock_user):
         ]
         mock_get.return_value = mock_tasks
         
-        response = client.get("/tasks/")
+        response = client.get("/tasks")
         
         assert response.status_code == 200
         data = response.json()
@@ -219,7 +219,7 @@ def test_get_tasks_filter_by_status(mock_user):
         ]
         mock_get.return_value = mock_tasks
         
-        response = client.get("/tasks/?status=todo")
+        response = client.get("/tasks?status=todo")
         
         assert response.status_code == 200
         data = response.json()

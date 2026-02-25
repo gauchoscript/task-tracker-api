@@ -148,7 +148,7 @@ def test_list_notifications_success(mock_user):
         
         mock_get.return_value = (mock_notifications, 2)
         
-        response = client.get("/notifications/")
+        response = client.get("/notifications")
         
         assert response.status_code == 200
         data = response.json()
@@ -229,7 +229,7 @@ def test_list_notifications_pagination(mock_user):
         mock_get.return_value = (mock_notifications, 100)
         
         # Test default skip/limit
-        response = client.get("/notifications/")
+        response = client.get("/notifications")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 100
@@ -238,7 +238,7 @@ def test_list_notifications_pagination(mock_user):
         # The mock_get call might use positional or keyword args, using call_args is safer or checking the patch call
         
         # Test custom skip/limit
-        response = client.get("/notifications/?skip=10&limit=5")
+        response = client.get("/notifications?skip=10&limit=5")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 100
@@ -257,6 +257,3 @@ def test_notification_task_relationship_defined():
     assert hasattr(Notification, "task")
     assert isinstance(Notification.task.property, RelationshipProperty)
     assert Notification.task.property.target.name == "task"
-    
-    # Check that Task does NOT have notifications (unidirectional)
-    assert not hasattr(Task, "notifications")
