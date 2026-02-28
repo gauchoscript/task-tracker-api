@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # FCM Configuration
     FCM_PROJECT_ID: Optional[str] = None
-    FCM_CREDENTIALS_PATH: Optional[str] = None
+    FCM_CREDENTIALS_JSON: Optional[str] = None
 
     # Notification Settings
     NOTIFICATION_DUE_DATE_DAYS_BEFORE: int = 1  # Notify X days before due

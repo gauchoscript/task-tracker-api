@@ -15,6 +15,8 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 import logging
 import traceback
+import json
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -38,18 +40,25 @@ class NotificationSender:
     
     @classmethod
     def _initialize_fcm(cls):
-        """Initialize Firebase Admin SDK if not already done."""
+        """Initialize Firebase Admin SDK using credentials from environment."""
         if cls._fcm_initialized or not FCM_AVAILABLE:
             return
-            
-        if settings.FCM_CREDENTIALS_PATH:
-            try:
-                cred = credentials.Certificate(settings.FCM_CREDENTIALS_PATH)
-                firebase_admin.initialize_app(cred)
-                cls._fcm_initialized = True
-                logger.info("FCM initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize FCM: {e}")
+
+        if not settings.FCM_CREDENTIALS_JSON:
+            logger.warning("FCM_CREDENTIALS_JSON not provided, FCM sending disabled")
+            return
+
+        try:
+            cred_dict = json.loads(settings.FCM_CREDENTIALS_JSON)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+            cls._fcm_initialized = True
+            logger.info("FCM initialized successfully from JSON string")
+        except json.JSONDecodeError as e:
+            logger.error(f"FCM_CREDENTIALS_JSON is not valid JSON: {e}")
+        except Exception as e:
+            logger.error(f"Failed to initialize FCM: {e}")
+            logger.debug(traceback.format_exc())
     
     @staticmethod
     def is_quiet_hours() -> bool:
