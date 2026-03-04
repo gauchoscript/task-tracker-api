@@ -146,13 +146,14 @@ def test_list_notifications_success(mock_user):
         mock_notifications[1].title = "Task needs attention"
         mock_notifications[1].message = "Test message 2"
         
-        mock_get.return_value = (mock_notifications, 2)
+        mock_get.return_value = (mock_notifications, 2, 1)
         
         response = client.get("/notifications")
         
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 2
+        assert data["unread"] == 1
         assert len(data["items"]) == 2
         assert data["items"][0]["read_at"] is None
         assert data["items"][0]["title"] == "Task due soon"
@@ -226,13 +227,14 @@ def test_list_notifications_pagination(mock_user):
             n.title = "Title"
             n.message = "Message"
             
-        mock_get.return_value = (mock_notifications, 100)
+        mock_get.return_value = (mock_notifications, 100, 2)
         
         # Test default skip/limit
         response = client.get("/notifications")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 100
+        assert data["unread"] == 2
         assert data["skip"] == 0
         assert data["limit"] == 20
         # The mock_get call might use positional or keyword args, using call_args is safer or checking the patch call
@@ -242,6 +244,7 @@ def test_list_notifications_pagination(mock_user):
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 100
+        assert data["unread"] == 2
         assert data["skip"] == 10
         assert data["limit"] == 5
         # Use ANY for the AsyncSession argument
