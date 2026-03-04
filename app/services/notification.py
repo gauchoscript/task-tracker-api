@@ -79,7 +79,7 @@ class NotificationService:
         limit: int = 20
     ) -> tuple[List[Notification], int]:
         """
-        Get sent notifications for a user with pagination, unread ones first.
+        Get sent notifications for a user with pagination, newest first.
         Returns a tuple of (notifications, total_count).
         """
         # Count total notifications for the user
@@ -96,7 +96,6 @@ class NotificationService:
         ).options(
             joinedload(Notification.task)
         ).order_by(
-            nullsfirst(Notification.read_at),
             desc(Notification.created_at)
         ).offset(skip).limit(limit)
         
