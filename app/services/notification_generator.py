@@ -88,12 +88,17 @@ class NotificationGenerator:
             days=settings.NOTIFICATION_STALE_TASK_DAYS
         )
         
-        # Subquery to check for existing pending notification of same type
+        # Subquery to check for existing notification of same type that is either pending
+        # OR was created within the last stale period
         existing_notification = select(Notification.id).where(
             and_(
                 Notification.task_id == Task.id,
                 Notification.type == NotificationType.STALE_TASK,
-                Notification.status == NotificationStatus.PENDING
+                not_(Notification.status == NotificationStatus.FAILED),
+                (
+                    (Notification.status == NotificationStatus.PENDING) |
+                    (Notification.created_at > threshold)
+                )
             )
         ).correlate(Task)
         
