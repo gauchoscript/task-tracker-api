@@ -33,5 +33,6 @@ class MarkReadRequest(BaseModel):
 class NotificationPaginated(BaseModel):
     items: List[NotificationResponse]
     total: int
+    unread: int
     skip: int
     limit: int

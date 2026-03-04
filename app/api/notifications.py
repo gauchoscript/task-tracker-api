@@ -48,10 +48,11 @@ async def list_notifications(
     """
     List sent notifications for the authenticated user with pagination and metadata, newest first.
     """
-    items, total = await NotificationService.get_notifications_for_user(db, current_user.id, skip=skip, limit=limit)
+    items, total, unread = await NotificationService.get_notifications_for_user(db, current_user.id, skip=skip, limit=limit)
     return NotificationPaginated(
         items=items,
         total=total,
+        unread=unread,
         skip=skip,
         limit=limit
     )

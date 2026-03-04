@@ -77,18 +77,23 @@ class NotificationService:
         user_id: UUID,
         skip: int = 0,
         limit: int = 20
-    ) -> tuple[List[Notification], int]:
+    ) -> tuple[List[Notification], int, int]:
         """
         Get sent notifications for a user with pagination, newest first.
         Returns a tuple of (notifications, total_count).
         """
-        # Count total notifications for the user
-        count_query = select(func.count()).select_from(Notification).where(
+        # Count total and unread notifications for the user in a single query
+        counts_query = select(
+            func.count().label("total"),
+            func.count().filter(Notification.read_at.is_(None)).label("unread")
+        ).where(
             Notification.user_id == user_id,
             Notification.status == NotificationStatus.SENT
         )
-        count_result = await db.execute(count_query)
-        total_count = count_result.scalar() or 0
+        counts_result = await db.execute(counts_query)
+        counts = counts_result.one()
+        total_count = counts.total or 0
+        unread_count = counts.unread or 0
 
         query = select(Notification).where(
             Notification.user_id == user_id,
@@ -112,7 +117,7 @@ class NotificationService:
             else:
                 logger.error(f"Orphan notification found: {n.id} for user {user_id}. Task {n.task_id} is missing.")
                 
-        return valid_notifications, total_count
+        return valid_notifications, total_count, unread_count
 
     @staticmethod
     async def mark_notification_read(
