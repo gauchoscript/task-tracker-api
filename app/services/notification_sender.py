@@ -86,9 +86,9 @@ class NotificationSender:
         return list(result.scalars().all())
     
     @staticmethod
-    async def get_device_tokens_for_user(db: AsyncSession, user_id) -> List[str]:
+    async def get_device_tokens_for_user(db: AsyncSession, user_id) -> List[DeviceToken]:
         """Get all device tokens for a user."""
-        query = select(DeviceToken.token).where(DeviceToken.user_id == user_id)
+        query = select(DeviceToken).where(DeviceToken.user_id == user_id)
         result = await db.execute(query)
         return list(result.scalars().all())
     
@@ -108,7 +108,7 @@ class NotificationSender:
         title: str, 
         body: str, 
         data: Optional[dict] = None
-    ) -> tuple[int, int, Optional[str]]:
+    ) -> tuple[List[bool], Optional[str]]:
         """
         Send FCM message to multiple tokens.
         
@@ -117,10 +117,10 @@ class NotificationSender:
         """
         if not FCM_AVAILABLE or not cls._fcm_initialized:
             logger.warning("FCM not available, skipping send")
-            return (0, 0, "FCM not configured")
+            return ([False] * len(tokens), "FCM not configured")
         
         if not tokens:
-            return (0, 0, "No device tokens")
+            return ([], "No device tokens")
         
         try:
             message = messaging.MulticastMessage(
@@ -133,11 +133,12 @@ class NotificationSender:
             )
             response = messaging.send_each_for_multicast(message)
             
-            return (response.success_count, response.failure_count, None)
+            success_mask = [r.success for r in response.responses]
+            return (success_mask, None)
         except Exception as e:
             error_msg = f"{str(e)}\n{traceback.format_exc()}"
             logger.error(f"FCM send error: {error_msg}")
-            return (0, len(tokens), error_msg)
+            return ([False] * len(tokens), error_msg)
     
     @classmethod
     async def send_notification(
@@ -153,9 +154,9 @@ class NotificationSender:
         """
         try:
             # Get device tokens for user
-            tokens = await cls.get_device_tokens_for_user(db, notification.user_id)
+            device_tokens = await cls.get_device_tokens_for_user(db, notification.user_id)
             
-            if not tokens:
+            if not device_tokens:
                 notification.status = NotificationStatus.FAILED
                 notification.error_message = "No device tokens registered for user"
                 notification.sent_at = datetime.now(timezone.utc)
@@ -175,16 +176,24 @@ class NotificationSender:
             title, body = format_notification(notification.type, task)
             
             # Send via FCM
-            data = {"notification_id": str(notification.id)}
-            success, failures, error = cls._send_fcm_message(tokens, title, body, data=data)
+            tokens = [dt.token for dt in device_tokens]
+            data = {"notification_id": str(notification.id)}           
+            success_mask, error = cls._send_fcm_message(tokens, title, body, data=data)
             
-            if success > 0:
+            success_count = sum(1 for s in success_mask if s)
+            
+            if success_count > 0:
                 notification.status = NotificationStatus.SENT
                 notification.sent_at = datetime.now(timezone.utc)
-                logger.info(f"Notification {notification.id} sent successfully to {success} devices")
+                
+                for dt, success in zip(device_tokens, success_mask):
+                    if success:
+                        dt.last_used_at = datetime.now(timezone.utc)
+                
+                logger.info(f"Notification {notification.id} sent successfully to {success_count} devices")
             else:
                 notification.status = NotificationStatus.FAILED
-                notification.error_message = error or f"Failed to send to {failures} devices"
+                notification.error_message = error or f"Failed to send to {len(device_tokens)} devices"
                 notification.sent_at = datetime.now(timezone.utc)
                 logger.error(f"Notification {notification.id} failed: {notification.error_message}")
             
