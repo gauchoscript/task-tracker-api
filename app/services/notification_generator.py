@@ -103,11 +103,16 @@ class NotificationGenerator:
         ).correlate(Task)
         
         # Find tasks in TODO status unchanged for too long
+        # AND (no due date OR already due)
         query = select(Task).where(
             and_(
                 Task.status == TaskStatus.TODO,
                 Task.status_changed_at != None,
                 Task.status_changed_at < threshold,
+                (
+                    (Task.due_date == None) |
+                    (Task.due_date <= datetime.now(timezone.utc))
+                ),
                 Task.deleted_at == None,
                 ~exists(existing_notification)
             )
