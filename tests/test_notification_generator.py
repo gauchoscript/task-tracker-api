@@ -105,6 +105,82 @@ class TestNotificationGenerator:
         assert added_notification.task_id == sample_stale_task.id
     
     @pytest.mark.asyncio
+    async def test_generate_stale_task_notifications_future_due_date(self, mock_db):
+        """Test that tasks with future due dates do NOT get stale notifications."""
+        future_due_task = Task(
+            id=uuid4(),
+            user_id=uuid4(),
+            title="Future Due Task",
+            status=TaskStatus.TODO,
+            due_date=datetime.now(timezone.utc) + timedelta(days=5),
+            deleted_at=None,
+            created_at=datetime.now(timezone.utc) - timedelta(days=15),
+            status_changed_at=datetime.now(timezone.utc) - timedelta(days=10)
+        )
+        
+        # Mock the result to avoid AttributeError
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_db.execute.return_value = mock_result
+        
+        await NotificationGenerator.generate_stale_task_notifications(mock_db)
+        
+        # Get the query object from the call to execute
+        query = mock_db.execute.call_args[0][0]
+        query_str = str(query)
+        
+        # Verify that the query contains due date related conditions
+        # The query should check for due_date is NULL OR due_date <= current_time
+        assert "task.due_date IS NULL" in query_str or "task.due_date is null" in query_str.lower()
+        assert "task.due_date <=" in query_str
+
+    @pytest.mark.asyncio
+    async def test_generate_stale_task_notifications_past_due_date(self, mock_db):
+        """Test that tasks with past due dates get stale notifications."""
+        past_due_task = Task(
+            id=uuid4(),
+            user_id=uuid4(),
+            title="Past Due Task",
+            status=TaskStatus.TODO,
+            due_date=datetime.now(timezone.utc) - timedelta(days=1),
+            deleted_at=None,
+            created_at=datetime.now(timezone.utc) - timedelta(days=15),
+            status_changed_at=datetime.now(timezone.utc) - timedelta(days=10)
+        )
+        
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [past_due_task]
+        mock_db.execute.return_value = mock_result
+        
+        count = await NotificationGenerator.generate_stale_task_notifications(mock_db)
+        
+        assert count == 1
+        mock_db.add.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_generate_stale_task_notifications_no_due_date(self, mock_db):
+        """Test that tasks with no due date get stale notifications."""
+        no_due_task = Task(
+            id=uuid4(),
+            user_id=uuid4(),
+            title="No Due Task",
+            status=TaskStatus.TODO,
+            due_date=None,
+            deleted_at=None,
+            created_at=datetime.now(timezone.utc) - timedelta(days=15),
+            status_changed_at=datetime.now(timezone.utc) - timedelta(days=10)
+        )
+        
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [no_due_task]
+        mock_db.execute.return_value = mock_result
+        
+        count = await NotificationGenerator.generate_stale_task_notifications(mock_db)
+        
+        assert count == 1
+        mock_db.add.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_generate_all_runs_both_generators(self, mock_db):
         """Test that generate_all runs both generators and returns combined results."""
         mock_result = MagicMock()
