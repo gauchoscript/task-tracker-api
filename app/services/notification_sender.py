@@ -177,7 +177,10 @@ class NotificationSender:
             
             # Send via FCM
             tokens = [dt.token for dt in device_tokens]
-            data = {"notification_id": str(notification.id)}           
+            data = {
+                "notification_id": str(notification.id),
+                "task_id": str(notification.task_id)
+            }           
             success_mask, error = cls._send_fcm_message(tokens, title, body, data=data)
             
             success_count = sum(1 for s in success_mask if s)
