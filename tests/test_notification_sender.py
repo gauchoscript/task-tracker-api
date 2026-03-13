@@ -126,7 +126,10 @@ class TestNotificationSender:
             mock_send_fcm.assert_called_once()
             args, kwargs = mock_send_fcm.call_args
             assert "data" in kwargs
-            assert kwargs["data"] == {"notification_id": str(sample_notification.id)}
+            assert kwargs["data"] == {
+                "notification_id": str(sample_notification.id),
+                "task_id": str(sample_notification.task_id)
+            }
 
     @pytest.mark.asyncio
     async def test_send_notification_updates_last_used_at(self, mock_db, sample_notification, sample_task):
