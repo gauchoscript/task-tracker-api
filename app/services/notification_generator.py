@@ -34,12 +34,19 @@ class NotificationGenerator:
             days=settings.NOTIFICATION_DUE_DATE_DAYS_BEFORE
         )
         
-        # Subquery to check for existing pending notification of same type
+        recent_threshold = datetime.now(timezone.utc) - timedelta(hours=24)
+        
+        # Subquery to check for existing notification of same type that is either pending
+        # OR was created within the last 24 hours
         existing_notification = select(Notification.id).where(
             and_(
                 Notification.task_id == Task.id,
                 Notification.type == NotificationType.DUE_DATE_APPROACHING,
-                Notification.status == NotificationStatus.PENDING
+                (
+                    (Notification.status == NotificationStatus.PENDING) |
+                    (Notification.created_at > recent_threshold)
+                ),
+                not_(Notification.status == NotificationStatus.FAILED)
             )
         ).correlate(Task)
         
