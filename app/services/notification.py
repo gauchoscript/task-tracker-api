@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import desc, nullsfirst, func
+from sqlalchemy import desc, nullsfirst, func, update
 from sqlalchemy.orm import joinedload
 import logging
 from datetime import datetime, timezone
@@ -147,3 +147,28 @@ class NotificationService:
             await db.refresh(notification)
             
         return notification
+
+    @staticmethod
+    async def mark_all_notifications_read(
+        db: AsyncSession,
+        user_id: UUID,
+        read_source: ReadSource
+    ) -> bool:
+        """
+        Mark all unread notifications as read for a user.
+        """
+        stmt = (
+            update(Notification)
+            .where(
+                Notification.user_id == user_id,
+                Notification.read_at.is_(None),
+                Notification.status == NotificationStatus.SENT
+            )
+            .values(
+                read_at=datetime.now(timezone.utc),
+                read_source=read_source
+            )
+        )
+        await db.execute(stmt)
+        await db.commit()
+        return True

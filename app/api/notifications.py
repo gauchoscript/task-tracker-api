@@ -57,6 +57,20 @@ async def list_notifications(
         limit=limit
     )
 
+@router.patch("/read", response_model=dict)
+async def mark_all_notifications_as_read(
+    read_in: MarkReadRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Mark all unread notifications as read for the authenticated user.
+    """
+    success = await NotificationService.mark_all_notifications_read(
+        db, current_user.id, read_in.read_source
+    )
+    return {"success": success}
+
 @router.patch("/{notification_id}/read", response_model=NotificationResponse)
 async def mark_notification_as_read(
     notification_id: UUID,
