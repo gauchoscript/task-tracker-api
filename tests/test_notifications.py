@@ -187,6 +187,23 @@ def test_mark_notification_read_success(mock_user):
         assert data["read_at"] is not None
         
     app.dependency_overrides.clear()
+    
+def test_mark_all_notifications_read_success(mock_user):
+    read_data = {"read_source": "web_client"}
+    
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    
+    with patch("app.services.notification.NotificationService.mark_all_notifications_read") as mock_mark:
+        mock_mark.return_value = True
+        
+        response = client.patch("/notifications/read", json=read_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        mock_mark.assert_called_once_with(ANY, mock_user.id, "web_client")
+        
+    app.dependency_overrides.clear()
 
 def test_mark_notification_read_not_found(mock_user):
     notification_id = uuid4()
